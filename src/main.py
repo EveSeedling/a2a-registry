@@ -139,18 +139,21 @@ async def register_agent(request: RegisterRequest, db: Session = Depends(get_db)
         agent_id = f"{base_id}-{counter}"
         counter += 1
     
-    # Store the agent
+    # Store the agent - serialize with mode='json' for proper JSON types
+    card_dict = request.card.model_dump(mode='json')
+    
     agent = AgentModel(
         id=agent_id,
         name=request.card.name,
         description=request.card.description,
         url=str(request.card.url),
-        card_json=request.card.model_dump(),
+        card_json=card_dict,
         registered_at=datetime.utcnow(),
         verified=False,
     )
     db.add(agent)
     db.commit()
+    db.refresh(agent)
     
     return RegisterResponse(
         success=True,
