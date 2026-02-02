@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2A Agent Registry</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #58a6ff; margin-bottom: 0.5rem; }
+        .subtitle { color: #8b949e; margin-bottom: 2rem; }
+        .search-box {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            font-size: 1rem;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #238636;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button:hover { background: #2ea043; }
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        .agent-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .agent-card h2 {
+            color: #58a6ff;
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .agent-card .description {
+            color: #8b949e;
+            margin-bottom: 1rem;
+        }
+        .agent-card .url {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #7ee787;
+            word-break: break-all;
+        }
+        .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .skill-tag {
+            background: #21262d;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #58a6ff;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #8b949e;
+        }
+        .stats {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: #161b22;
+            border-radius: 8px;
+        }
+        .stat { text-align: center; }
+        .stat-value { font-size: 2rem; color: #58a6ff; font-weight: bold; }
+        .stat-label { font-size: 0.85rem; color: #8b949e; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .register-cta {
+            background: #161b22;
+            border: 1px dashed #30363d;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 2rem;
+        }
+        code {
+            background: #21262d;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 A2A Agent Registry</h1>
+    <p class="subtitle">A public directory for discovering <a href="https://a2a-protocol.org">A2A Protocol</a> compatible agents</p>
+    
+    <div class="stats" id="stats">
+        <div class="stat">
+            <div class="stat-value" id="total-agents">-</div>
+            <div class="stat-label">Registered Agents</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value" id="total-skills">-</div>
+            <div class="stat-label">Total Skills</div>
+        </div>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="search" placeholder="Search agents by name, skill, or tag...">
+        <button onclick="searchAgents()">Search</button>
+    </div>
+
+    <div class="agents-grid" id="agents-grid">
+        <div class="empty-state">Loading agents...</div>
+    </div>
+
+    <div class="register-cta">
+        <h3>Want to register your agent?</h3>
+        <p style="margin: 1rem 0; color: #8b949e;">
+            POST your Agent Card to <code>/agents</code> — see the 
+            <a href="/docs">API docs</a> for details.
+        </p>
+    </div>
+
+    <script>
+        const API_BASE = '';
+
+        async function loadAgents() {
+            try {
+                const res = await fetch(`${API_BASE}/agents`);
+                const data = await res.json();
+                renderAgents(data.agents);
+                updateStats(data.agents);
+            } catch (err) {
+                document.getElementById('agents-grid').innerHTML = 
+                    '<div class="empty-state">Failed to load agents</div>';
+            }
+        }
+
+        async function searchAgents() {
+            const q = document.getElementById('search').value;
+            if (!q) return loadAgents();
+            
+            try {
+                const res = await fetch(`${API_BASE}/agents/search?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                renderAgents(data.results);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderAgents(agents) {
+            const grid = document.getElementById('agents-grid');
+            if (!agents || agents.length === 0) {
+                grid.innerHTML = '<div class="empty-state">No agents found. Be the first to register!</div>';
+                return;
+            }
+            
+            grid.innerHTML = agents.map(agent => `
+                <div class="agent-card">
+                    <h2>${escapeHtml(agent.card.name)}</h2>
+                    <p class="description">${escapeHtml(agent.card.description)}</p>
+                    <p class="url">${escapeHtml(agent.card.url)}</p>
+                    <div class="skills">
+                        ${agent.card.skills.map(s => `<span class="skill-tag">${escapeHtml(s.name)}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats(agents) {
+            document.getElementById('total-agents').textContent = agents.length;
+            const totalSkills = agents.reduce((sum, a) => sum + (a.card.skills?.length || 0), 0);
+            document.getElementById('total-skills').textContent = totalSkills;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Search on Enter
+        document.getElementById('search').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchAgents();
+        });
+
+        // Load on page load
+        loadAgents();
+    </script>
+</body>
+</html>

@@ -7,6 +7,8 @@ Fills the gap in the A2A spec for curated registry discovery.
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from pathlib import Path
 from pydantic import BaseModel, HttpUrl
 from typing import Optional
 from datetime import datetime
@@ -81,8 +83,19 @@ agents_db: dict[str, RegisteredAgent] = {}
 
 # ============ API Endpoints ============
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
+    """Serve the web UI."""
+    template_path = Path(__file__).parent / "templates" / "index.html"
+    if template_path.exists():
+        return template_path.read_text()
+    # Fallback to JSON if no template
+    return HTMLResponse(content="<h1>A2A Agent Registry</h1><p>See <a href='/docs'>/docs</a> for API.</p>")
+
+
+@app.get("/api")
+async def api_info():
+    """API information endpoint."""
     return {
         "name": "A2A Agent Registry",
         "version": "0.1.0",
