@@ -234,6 +234,14 @@ async def delete_agent(agent_id: str):
     return {"success": True, "message": f"Agent {agent_id} removed"}
 
 
+@app.post("/validate")
+async def validate_card(request: RegisterRequest):
+    """Validate an Agent Card without registering it."""
+    from .validator import validate_agent_card
+    result = validate_agent_card(request.card.model_dump())
+    return result
+
+
 # ============ Run ============
 
 if __name__ == "__main__":
