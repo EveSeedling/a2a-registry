@@ -4,7 +4,7 @@ Uses PostgreSQL via SQLAlchemy.
 """
 
 import os
-from sqlalchemy import create_engine, Column, String, DateTime, Boolean, JSON
+from sqlalchemy import create_engine, Column, String, DateTime, Boolean, JSON, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -33,6 +33,12 @@ class AgentModel(Base):
     registered_at = Column(DateTime, default=datetime.utcnow)
     last_seen = Column(DateTime, nullable=True)
     verified = Column(Boolean, default=False)
+    
+    # v2: Dynamic State fields
+    status = Column(String, default="offline")  # online, offline, busy
+    load = Column(Float, nullable=True)  # 0.0-1.0 capacity indicator
+    status_message = Column(String, nullable=True)  # optional status message
+    heartbeat_token = Column(String, nullable=True)  # auth token for heartbeats
 
 
 def init_db():
